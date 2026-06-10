@@ -2,7 +2,12 @@
 
 #ifdef WIN32
 #  include <Windows.h>
-   enum class ManagedWindowStyle { Normal, OverlayTransparent };
+   // Normal           — standard OS window with native title bar and _ □ ✖ buttons.
+   // OverlayTransparent — borderless, layered, click-through-capable overlay.
+   // CustomChrome      — borderless window whose title bar and _ □ ✖ buttons are drawn
+   //                     by ImGui, while resize / Aero Snap / maximize / drop shadow keep
+   //                     working through proper non-client message handling.
+   enum class ManagedWindowStyle { Normal, OverlayTransparent, CustomChrome };
 #endif
 
 class GfxManager {
@@ -22,7 +27,12 @@ protected:
     bool               m_classRegistered = false;
     ManagedWindowStyle m_windowStyle     = ManagedWindowStyle::Normal;
 
+    // ── CustomChrome state ──────────────────────────────────────────────────
+    float m_titleBarHeight  = 32.0f;   // logical height of the draggable title bar (px)
+    bool  m_titleBarHovered = false;   // refreshed each frame by the title-bar renderer
+
     static LRESULT CALLBACK WndProcThunk(HWND, UINT, WPARAM, LPARAM) noexcept;
+    LRESULT HandleCustomChromeMessage(HWND, UINT, WPARAM, LPARAM, bool& handled) noexcept;
 
     bool RegisterWindowClass(HINSTANCE, const wchar_t* className) noexcept;
     bool CreateManagedWindow(HINSTANCE, const wchar_t* title,
@@ -54,6 +64,29 @@ public:
     void SetClickThrough(bool enabled) noexcept;
     UINT HandleWMSG() noexcept;
     HWND GetHWND() const noexcept { return m_hwnd; }
+
+    // ── CustomChrome window controls (no-ops for other styles) ──────────────
+    // Logical height of the draggable title bar in pixels. Scale it yourself if
+    // your UI is DPI-scaled (e.g. via ScaleManager). Default: 32.
+    void  SetTitleBarHeight(float px) noexcept   { m_titleBarHeight = px; }
+    float GetTitleBarHeight() const noexcept     { return m_titleBarHeight; }
+
+    bool  IsWindowMaximized() const noexcept;
+    void  MinimizeWindow() noexcept;
+    void  ToggleMaximizeWindow() noexcept;
+    void  CloseWindow() noexcept;                // posts WM_CLOSE → quits the loop
+
+    // Draws the built-in title bar (title text + _ □ ✖ buttons) for a CustomChrome
+    // window. Call once at the very top of your render callback, inside the ImGui
+    // frame. Returns the title bar height in pixels so you can offset your content.
+    // The buttons are wired to minimize / maximize-restore / close automatically and
+    // empty title-bar space drags the window through native non-client handling.
+    float RenderDefaultTitleBar(const char* title) noexcept;
+
+    // Lower-level hook for hand-rolled title bars: report whether the cursor is over
+    // a draggable (non-interactive) region of your title bar this frame, so the OS
+    // can move/snap the window. Pair with a title bar you draw yourself.
+    void  SetTitleBarDragHovered(bool hovered) noexcept { m_titleBarHovered = hovered; }
 #else
     static GfxManager* Create(int w, int h) noexcept;
 #endif

@@ -104,6 +104,7 @@ if(WIN32)
             d3d11
             d3d9
             dxgi
+            dwmapi
     )
     target_compile_definitions(DearImguiEzManager PUBLIC WIN32)
 endif()
