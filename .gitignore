@@ -1,0 +1,44 @@
+# Build
+build/
+Build/
+build-*/
+out/
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+install_manifest.cmake
+Makefile
+compile_commands.json
+generated/
+
+# MSVC
+*.obj
+*.pch
+*.pdb
+*.ilk
+*.idb
+*.ipdb
+*.iobj
+*.exp
+*.lib
+*.exe
+.vs/
+x64/
+x86/
+
+# IDE
+.vscode/
+.idea/
+*.user
+*.suo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Logs / temp
+*.log
+*.tmp
+*.bak

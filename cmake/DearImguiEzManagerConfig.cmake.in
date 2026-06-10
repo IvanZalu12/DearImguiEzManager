@@ -1,0 +1,11 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+find_dependency(freetype)
+
+if(NOT TARGET DearImguiEzManager::DearImguiEzManager)
+    include("${CMAKE_CURRENT_LIST_DIR}/DearImguiEzManagerTargets.cmake")
+endif()
+
+check_required_components(DearImguiEzManager)
