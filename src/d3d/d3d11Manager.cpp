@@ -54,6 +54,11 @@ void D3D11Manager::RenderFrame() noexcept
 {
     if (!m_pData || !m_pData->bImGuiInitialized)
         return;
+    if (m_hwnd && IsIconic(m_hwnd))   // minimized: client is 0x0, skip the whole frame
+        return;
+    if (m_rendering)   // re-entrancy guard (e.g. a synchronous WM_SIZE mid-frame)
+        return;
+    m_rendering = true;
 
     if (m_pPreFrameCallback)
         m_pPreFrameCallback();
@@ -72,6 +77,8 @@ void D3D11Manager::RenderFrame() noexcept
     m_pData->pContext->OMSetRenderTargets(1, &m_pData->pMainRTV, nullptr);
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
     m_pData->pSwapChain->Present(1, 0);
+
+    m_rendering = false;
 }
 
 void D3D11Manager::OnResize(int width, int height) noexcept

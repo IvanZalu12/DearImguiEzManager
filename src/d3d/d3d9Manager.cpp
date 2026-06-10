@@ -48,12 +48,18 @@ void D3D9Manager::RenderFrame() noexcept
 {
     if (!m_pDevice || !m_bImGuiInit)
         return;
+    if (m_hwnd && IsIconic(m_hwnd))   // minimized: client is 0x0, skip the whole frame
+        return;
+    if (m_rendering)   // re-entrancy guard (e.g. a synchronous WM_SIZE mid-frame)
+        return;
 
     HRESULT coop = m_pDevice->TestCooperativeLevel();
     if (coop == D3DERR_DEVICELOST)
         return;
     if (coop == D3DERR_DEVICENOTRESET && !TryResetDevice())
         return;
+
+    m_rendering = true;
 
     if (m_pPreFrameCallback)
         m_pPreFrameCallback();
@@ -80,6 +86,8 @@ void D3D9Manager::RenderFrame() noexcept
     HRESULT pr = m_pDevice->Present(nullptr, nullptr, nullptr, nullptr);
     if (pr == D3DERR_DEVICELOST || pr == D3DERR_DEVICENOTRESET)
         TryResetDevice();
+
+    m_rendering = false;
 }
 
 void D3D9Manager::OnResize(int width, int height) noexcept

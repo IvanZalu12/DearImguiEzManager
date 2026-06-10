@@ -20,6 +20,10 @@ protected:
     PreFrameCallbackFn m_pPreFrameCallback = nullptr;
     MenuInitCallbackFn m_pMenuInitCallback = nullptr;
 
+    // Guards against re-entering RenderFrame (e.g. a synchronous WM_SIZE dispatched
+    // while a frame is already open would otherwise trip ImGui's NewFrame assert).
+    bool               m_rendering         = false;
+
 #ifdef WIN32
     HWND               m_hwnd            = nullptr;
     HINSTANCE          m_hInstance       = nullptr;
@@ -64,6 +68,10 @@ public:
     void SetClickThrough(bool enabled) noexcept;
     UINT HandleWMSG() noexcept;
     HWND GetHWND() const noexcept { return m_hwnd; }
+
+    // Top-left of the render client area in screen pixels. Feed to LayoutManager::BeginFrame
+    // so floating windows keep their on-screen position across maximize/restore.
+    POINT GetClientScreenOrigin() const noexcept;
 
     // ── CustomChrome window controls (no-ops for other styles) ──────────────
     // Logical height of the draggable title bar in pixels. Scale it yourself if

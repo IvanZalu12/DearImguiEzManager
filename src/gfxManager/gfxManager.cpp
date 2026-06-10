@@ -122,6 +122,13 @@ void GfxManager::SetWindowAlpha(BYTE alpha) noexcept
     if (m_hwnd) SetLayeredWindowAttributes(m_hwnd, 0, alpha, LWA_ALPHA);
 }
 
+POINT GfxManager::GetClientScreenOrigin() const noexcept
+{
+    POINT p{ 0, 0 };
+    if (m_hwnd) ClientToScreen(m_hwnd, &p);
+    return p;
+}
+
 void GfxManager::SetClickThrough(bool enabled) noexcept
 {
     if (!m_hwnd) return;
@@ -137,12 +144,15 @@ bool GfxManager::IsWindowMaximized() const noexcept
 
 void GfxManager::MinimizeWindow() noexcept
 {
-    if (m_hwnd) ShowWindow(m_hwnd, SW_MINIMIZE);
+    // Posted (not ShowWindow) so the state change — and the WM_SIZE it triggers — runs
+    // on the message pump, never re-entrantly while a render frame is open.
+    if (m_hwnd) PostMessageW(m_hwnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
 }
 
 void GfxManager::ToggleMaximizeWindow() noexcept
 {
-    if (m_hwnd) ShowWindow(m_hwnd, IsZoomed(m_hwnd) ? SW_RESTORE : SW_MAXIMIZE);
+    if (m_hwnd)
+        PostMessageW(m_hwnd, WM_SYSCOMMAND, IsZoomed(m_hwnd) ? SC_RESTORE : SC_MAXIMIZE, 0);
 }
 
 void GfxManager::CloseWindow() noexcept
@@ -372,8 +382,13 @@ LRESULT CALLBACK GfxManager::WndProcThunk(HWND hwnd, UINT msg, WPARAM wp, LPARAM
         return true;
     switch (msg) {
     case WM_SIZE:
-        if (self && wp != SIZE_MINIMIZED)
+        if (self && wp != SIZE_MINIMIZED) {
             self->OnResize(LOWORD(lp), HIWORD(lp));
+            // Render synchronously: during a live resize the OS runs a modal loop and the
+            // app's own RenderFrame() is blocked, so without this the OS just stretches the
+            // last backbuffer's edge pixels across the new area (the "smearing" artifact).
+            self->RenderFrame();
+        }
         return 0;
     case WM_SYSCOMMAND:
         if ((wp & 0xFFF0) == SC_KEYMENU) return 0;

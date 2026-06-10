@@ -96,10 +96,40 @@ void LayoutManager::SetFixed(WindowHandle wnd, bool fixed) noexcept
         m_windows[wnd.id].fixed = fixed;
 }
 
-void LayoutManager::BeginFrame() noexcept
+void LayoutManager::BeginFrame(ImVec2 viewportScreenOrigin) noexcept
 {
     const ImGuiViewport* vp = ImGui::GetMainViewport();
-    if (vp) m_viewportSize = vp->Size;
+    if (!vp) return;
+
+    const ImVec2 newSize   = vp->Size;
+    const ImVec2 newOrigin = viewportScreenOrigin;
+
+    const bool havePrev      = (m_viewportSize.x > 0.f && m_viewportSize.y > 0.f);
+    const bool sizeChanged   = newSize.x   != m_viewportSize.x   || newSize.y   != m_viewportSize.y;
+    const bool originChanged = newOrigin.x != m_viewportOrigin.x || newOrigin.y != m_viewportOrigin.y;
+
+    // Keep floating windows at the same on-screen position across a maximize/restore.
+    // We act only when the client area BOTH moved and resized on screen — which uniquely
+    // identifies maximize / restore / snap / top-left-edge resize, and excludes a plain
+    // move (size unchanged) and a bottom/right-edge resize (origin unchanged). The shift
+    // equals the client origin's screen delta, so a window stays put on screen while the
+    // chrome grows/shrinks around it. Fixed/side-anchored windows position themselves and
+    // are left untouched; the per-window anti-offscreen clamp in RenderWindow then runs
+    // *after* this, so windows are not lost when the client shrinks (maximize -> normal).
+    if (havePrev && sizeChanged && originChanged) {
+        const float dx = m_viewportOrigin.x - newOrigin.x;
+        const float dy = m_viewportOrigin.y - newOrigin.y;
+        for (auto& ws : m_windows) {
+            if (ws.firstShow || ws.fixed || ws.anchored)
+                continue;
+            ws.lastPos.x += dx;
+            ws.lastPos.y += dy;
+            ws.forceReposition = true;
+        }
+    }
+
+    m_viewportSize   = newSize;
+    m_viewportOrigin = newOrigin;
 }
 
 void LayoutManager::RenderWindow(WindowHandle wnd) noexcept
@@ -127,8 +157,10 @@ void LayoutManager::RenderWindow(WindowHandle wnd) noexcept
         pos.y = std::clamp(pos.y, 0.f, m_viewportSize.y - minVisible);
     }
 
-    // Anchored windows need ImGuiCond_Always so they track parent every frame
-    const ImGuiCond posCond = (ws.firstShow || ws.anchored) ? ImGuiCond_Always : ImGuiCond_Once;
+    // Anchored windows need ImGuiCond_Always so they track parent every frame; a
+    // forced reposition (viewport resize) likewise overrides the dragged position once.
+    const ImGuiCond posCond = (ws.firstShow || ws.anchored || ws.forceReposition)
+                                  ? ImGuiCond_Always : ImGuiCond_Once;
     ImGui::SetNextWindowPos(pos, posCond);
     ImGui::SetNextWindowSize(ImVec2(w, h));
 
@@ -165,7 +197,8 @@ void LayoutManager::RenderWindow(WindowHandle wnd) noexcept
     ImGui::End();
     ImGui::PopStyleVar(2);
 
-    ws.firstShow = false;
+    ws.firstShow       = false;
+    ws.forceReposition = false;
 }
 
 void LayoutManager::RenderTiles(const std::vector<TileDef>& tiles, SplitDir dir,

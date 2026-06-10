@@ -71,7 +71,10 @@ public:
                 AnchorSide side, int baseOffset = 0) noexcept;
     void SetFixed(WindowHandle wnd, bool fixed) noexcept;
 
-    void BeginFrame() noexcept;
+    // viewportScreenOrigin: the render client area's top-left in screen pixels
+    // (e.g. GfxManager::GetClientScreenOrigin). Used to keep floating windows on the
+    // same screen spot across maximize/restore. Pass {0,0} to disable that behavior.
+    void BeginFrame(ImVec2 viewportScreenOrigin = ImVec2(0.f, 0.f)) noexcept;
     void RenderWindow(WindowHandle wnd) noexcept;
 
     ImVec2 GetWindowPos(WindowHandle wnd) const noexcept;
@@ -101,10 +104,11 @@ private:
         ImVec4 tileBlendColor  = { 0.f, 0.f, 0.f, 0.f };
         TileRoundingStyle roundingStyle = TileRoundingStyle::OuterOnly;
 
-        bool firstShow     = true;
-        bool centerOnFirst = false;
-        bool antiOffscreen = true;
-        bool fixed         = false;
+        bool firstShow      = true;
+        bool centerOnFirst  = false;
+        bool antiOffscreen  = true;
+        bool fixed          = false;
+        bool forceReposition = false;  // one-shot: re-apply pos with ImGuiCond_Always
 
         bool       anchored = false;
         AnchorInfo anchor;
@@ -133,5 +137,6 @@ private:
 
     ScaleManager*             m_pScale;
     std::vector<WindowState>  m_windows;
-    ImVec2                    m_viewportSize = {0, 0};
+    ImVec2                    m_viewportSize   = {0, 0};
+    ImVec2                    m_viewportOrigin = {0, 0};  // client top-left in screen px
 };
