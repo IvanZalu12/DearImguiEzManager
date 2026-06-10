@@ -19,7 +19,7 @@ C++ helpers on top of [Dear ImGui](https://github.com/ocornut/imgui): graphics m
 |   [Dear ImGui](https://github.com/ocornut/imgui)  | UI (required; linked by the consumer)                         |
 |   [FreeType](https://freetype.org/)               | font rendering (fetched via CMake FetchContent by default)    |
 |   Windows SDK                                     | D3D9/D3D11 backends (Windows only)                            |
-|---------------------------------------------------|---------------------------------------------------------------|
+
 
 ## Quick start
 
@@ -100,7 +100,7 @@ DearImguiEzManager/
 | `DEZMGR_FETCH_FREETYPE` |  `ON`   | Fetch FreeType via FetchContent   |
 | `DEZMGR_FETCH_IMGUI`    |  `OFF`  | Fetch Dear ImGui via FetchContent |
 | `DEZMGR_BUILD_EXAMPLES` |  `OFF`  | Build examples (when added)       |
-|-------------------------|---------|-----------------------------------|
+
 
 ## Platforms
 
